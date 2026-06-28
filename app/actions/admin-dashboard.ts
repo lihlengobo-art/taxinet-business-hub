@@ -12,6 +12,7 @@ import {
   getTrafficByDay,
 } from './admin-analytics'
 import {
+  getConnectionsByDay,
   getExpensesByCategory,
   getFinanceSummary,
   getLeadSummary,
@@ -50,18 +51,42 @@ export async function loadDashboard(range: DateRange) {
       ? Promise.all([
           getFinanceSummary(range),
           getRevenueByDay(range),
+          getConnectionsByDay(range),
           getRevenueByPartner(range),
           getExpensesByCategory(range),
           listSales(range),
           listExpenses(range),
-        ]).then(([summary, revenueByDay, revenueByPartner, expenseCats, sales, expenses]) => ({
-          summary,
-          revenueByDay,
-          revenueByPartner,
-          expenseCats,
-          sales,
-          expenses,
-        }))
+        ]).then(
+          ([summary, revenueByDay, connectionsByDay, revenueByPartner, expenseCats, sales, expenses]) => {
+            // Merge partner revenue and Wi-Fi connection revenue into one daily series.
+            const byDay = new Map<
+              string,
+              { day: string; revenue: number; commission: number; wifi: number }
+            >()
+            for (const d of revenueByDay) {
+              byDay.set(d.day, { day: d.day, revenue: d.revenue, commission: d.commission, wifi: 0 })
+            }
+            for (const c of connectionsByDay) {
+              const existing = byDay.get(c.day) ?? {
+                day: c.day,
+                revenue: 0,
+                commission: 0,
+                wifi: 0,
+              }
+              existing.wifi = c.revenue
+              byDay.set(c.day, existing)
+            }
+            const merged = [...byDay.values()].sort((a, b) => a.day.localeCompare(b.day))
+            return {
+              summary,
+              revenueByDay: merged,
+              revenueByPartner,
+              expenseCats,
+              sales,
+              expenses,
+            }
+          },
+        )
       : null,
     canAccess(role, 'partners')
       ? Promise.all([listPartners(), getLeadSummary(range)]).then(([list, leads]) => ({
