@@ -207,6 +207,18 @@ export const expenses = pgTable('expenses', {
   createdAt: timestamp('created_at').notNull().defaultNow(),
 })
 
+// Each paid Wi-Fi connection (R7) at the rank. Deduplicated per device per day
+// via a unique (device_id, connection_date) constraint, so a returning client
+// in the same day is never counted twice in financials.
+export const connections = pgTable('connections', {
+  id: serial('id').primaryKey(),
+  deviceId: text('device_id').notNull(),
+  connectionDate: date('connection_date').notNull().defaultNow(),
+  amount: numeric('amount').notNull().default('7'),
+  rankName: text('rank_name').notNull().default('Wanderers Taxi Rank'),
+  createdAt: timestamp('created_at').notNull().defaultNow(),
+})
+
 export const auditLogs = pgTable('audit_logs', {
   id: serial('id').primaryKey(),
   actorId: text('actor_id'),
@@ -226,3 +238,4 @@ export type Partner = typeof partners.$inferSelect
 export type Sale = typeof sales.$inferSelect
 export type Expense = typeof expenses.$inferSelect
 export type AuditLog = typeof auditLogs.$inferSelect
+export type Connection = typeof connections.$inferSelect

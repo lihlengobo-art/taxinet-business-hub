@@ -18,7 +18,7 @@ import {
 import type { DashboardData } from '@/app/actions/admin-dashboard'
 import type { DateRange } from '@/app/actions/admin-analytics'
 import { downloadCsv, formatDay, formatZAR } from '@/lib/admin/format'
-import { Banknote, Download, Printer, TrendingDown, Wallet } from 'lucide-react'
+import { Banknote, Download, Printer, TrendingDown, Wallet, Wifi } from 'lucide-react'
 import { Bar, BarChart, CartesianGrid, Legend, XAxis, YAxis } from 'recharts'
 import { KpiCard } from '../kpi-card'
 import { RecordExpenseDialog, RecordSaleDialog } from '../finance-dialogs'
@@ -80,12 +80,22 @@ export function FinanceSection({
         </p>
       </div>
 
-      <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
-        <KpiCard label="Revenue" value={formatZAR(data.summary.revenue)} icon={Banknote} />
+      <div className="grid grid-cols-2 gap-3 lg:grid-cols-5">
+        <KpiCard
+          label="Wi-Fi revenue"
+          value={formatZAR(data.summary.connectionRevenue)}
+          hint={`${data.summary.connectionCount} connections`}
+          icon={Wifi}
+        />
+        <KpiCard
+          label="Partner revenue"
+          value={formatZAR(data.summary.revenue)}
+          hint={`${data.summary.salesCount} sales`}
+          icon={Banknote}
+        />
         <KpiCard
           label="Commission"
           value={formatZAR(data.summary.commission)}
-          hint={`${data.summary.salesCount} sales`}
           icon={Wallet}
           accent="accent"
         />
@@ -105,11 +115,14 @@ export function FinanceSection({
       </div>
 
       <Card className="p-5">
-        <h2 className="font-semibold">Revenue & commission</h2>
-        <p className="text-sm text-muted-foreground">Daily totals over the period</p>
+        <h2 className="font-semibold">Daily income</h2>
+        <p className="text-sm text-muted-foreground">
+          Wi-Fi connections, partner revenue & commission
+        </p>
         <ChartContainer
           config={{
-            revenue: { label: 'Revenue', color: 'var(--chart-1)' },
+            wifi: { label: 'Wi-Fi', color: 'var(--chart-1)' },
+            revenue: { label: 'Partner revenue', color: 'var(--chart-3)' },
             commission: { label: 'Commission', color: 'var(--chart-2)' },
           }}
           className="mt-4 h-[240px] w-full"
@@ -120,6 +133,7 @@ export function FinanceSection({
             <YAxis tickLine={false} axisLine={false} width={40} className="text-xs" />
             <ChartTooltip content={<ChartTooltipContent />} />
             <Legend />
+            <Bar dataKey="wifi" fill="var(--color-wifi)" radius={4} />
             <Bar dataKey="revenue" fill="var(--color-revenue)" radius={4} />
             <Bar dataKey="commission" fill="var(--color-commission)" radius={4} />
           </BarChart>
