@@ -3,7 +3,7 @@
 import { Brand } from '@/components/brand'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
-import { startSession } from '@/app/actions/content'
+import { recordConnection, startSession } from '@/app/actions/content'
 import { getIcon } from '@/lib/icon-map'
 import {
   AGE_GROUPS,
@@ -15,7 +15,7 @@ import {
 import { cn } from '@/lib/utils'
 import { ArrowLeft, ArrowRight, Loader2, MapPin, Wifi } from 'lucide-react'
 import { useRouter } from 'next/navigation'
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 
 function getSessionId() {
   if (typeof window === 'undefined') return ''
@@ -32,6 +32,12 @@ export function CategorizationFlow() {
   const [step, setStep] = useState<'type' | 'age'>('type')
   const [userType, setUserType] = useState<UserType | null>(null)
   const [pending, setPending] = useState(false)
+
+  // Count the paid R7 connection the moment someone reaches the site, before
+  // they choose a category. Deduplicated per device per day on the server.
+  useEffect(() => {
+    void recordConnection().catch(() => {})
+  }, [])
 
   async function go(type: UserType, age?: AgeGroup) {
     setPending(true)
