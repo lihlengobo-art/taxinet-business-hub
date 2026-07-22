@@ -2,7 +2,16 @@
 
 import { getAdminUser, logAudit, requireSection } from '@/lib/admin/auth'
 import { db } from '@/lib/db'
-import { auditLogs, expenses, leads, partners, sales, user as userTable } from '@/lib/db/schema'
+import {
+  auditLogs,
+  connections,
+  expenses,
+  leads,
+  partners,
+  sales,
+  user as userTable,
+} from '@/lib/db/schema'
+import { CONNECTION_PRICE } from '@/lib/pricing'
 import { and, desc, eq, gte, lte, sql } from 'drizzle-orm'
 import type { AnyPgColumn } from 'drizzle-orm/pg-core'
 import { revalidatePath } from 'next/cache'
@@ -32,20 +41,46 @@ export async function getFinanceSummary(range?: DateRange) {
     .from(expenses)
     .where(range ? and(gte(expenses.expenseDate, sql`${range.from}::date`), lte(expenses.expenseDate, sql`${range.to}::date`)) : undefined)
 
+  // Paid Wi-Fi connections (already deduplicated per device per day at insert).
+  const [conn] = await db
+    .select({ count: sql<number>`count(*)::int` })
+    .from(connections)
+    .where(within(connections.connectionDate, range))
+
   const revenue = rev.revenue ?? 0
   const commission = rev.commission ?? 0
   const expense = exp.total ?? 0
-  // Net profit = commission earned by the platform minus operating expenses.
-  const netProfit = commission - expense
+  const connectionCount = conn?.count ?? 0
+  const connectionRevenue = connectionCount * CONNECTION_PRICE
+  // The platform keeps the full R7 per connection plus its partner commission,
+  // less operating expenses.
+  const netProfit = connectionRevenue + commission - expense
 
   return {
     revenue,
     commission,
     expenses: expense,
+    connectionRevenue,
+    connectionCount,
     netProfit,
     salesCount: rev.count ?? 0,
     avgSale: rev.count > 0 ? Math.round((revenue / rev.count) * 100) / 100 : 0,
   }
+}
+
+// Daily Wi-Fi connection counts and revenue for the period.
+export async function getConnectionsByDay(range?: DateRange) {
+  await requireSection('finance')
+  const rows = await db
+    .select({
+      day: sql<string>`to_char(${connections.connectionDate}, 'YYYY-MM-DD')`,
+      connections: sql<number>`count(*)::int`,
+    })
+    .from(connections)
+    .where(within(connections.connectionDate, range))
+    .groupBy(sql`to_char(${connections.connectionDate}, 'YYYY-MM-DD')`)
+    .orderBy(sql`to_char(${connections.connectionDate}, 'YYYY-MM-DD')`)
+  return rows.map((r) => ({ ...r, revenue: r.connections * CONNECTION_PRICE }))
 }
 
 export async function getRevenueByDay(range?: DateRange) {

@@ -11,8 +11,9 @@ import {
 import type { DashboardData } from '@/app/actions/admin-dashboard'
 import type { DateRange } from '@/app/actions/admin-analytics'
 import { downloadCsv, formatDay, formatNumber } from '@/lib/admin/format'
-import { userTypeLabel } from '@/lib/user-types'
-import { Download, Gauge, MousePointerClick, Target, Users } from 'lucide-react'
+import { generateClickReport } from '@/lib/admin/click-report'
+import { RANK_NAME, userTypeLabel } from '@/lib/user-types'
+import { Download, FileText, Gauge, MousePointerClick, Target, Users } from 'lucide-react'
 import {
   Area,
   AreaChart,
@@ -62,8 +63,41 @@ export function AnalyticsSection({
     )
   }
 
+  function downloadPdfReport() {
+    generateClickReport({
+      data: data.clickReport,
+      range,
+      logoUrl: `${window.location.origin}/images/taxinet-logo.jpg`,
+      rankName: RANK_NAME,
+    })
+  }
+
+  // Clicks split by audience flow for the on-screen summary.
+  const clickFlows = data.clickReport.byUserType.map((r, i) => ({
+    label: userTypeLabel(r.userType),
+    clicks: r.clicks,
+    fill: PIE_COLORS[i % PIE_COLORS.length],
+    share:
+      data.clickReport.totalClicks > 0
+        ? Math.round((r.clicks / data.clickReport.totalClicks) * 100)
+        : 0,
+  }))
+
   return (
     <div className="flex flex-col gap-5">
+      <div className="flex items-center justify-between gap-3">
+        <div>
+          <h2 className="font-semibold">Engagement analytics</h2>
+          <p className="text-sm text-muted-foreground">
+            Clicks and conversions across the rank
+          </p>
+        </div>
+        <Button size="sm" onClick={downloadPdfReport}>
+          <FileText className="mr-1.5 h-4 w-4" />
+          Download PDF
+        </Button>
+      </div>
+
       <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
         <KpiCard label="Sessions" value={formatNumber(data.overview.totalSessions)} icon={Users} />
         <KpiCard
@@ -85,6 +119,41 @@ export function AnalyticsSection({
           accent="accent"
         />
       </div>
+
+      <Card className="p-5">
+        <div className="flex items-start justify-between gap-3">
+          <div>
+            <h2 className="font-semibold">Clicks by audience flow</h2>
+            <p className="text-sm text-muted-foreground">
+              Vendor vs passenger and other rank audiences
+            </p>
+          </div>
+          <span className="text-sm font-semibold text-primary">
+            {formatNumber(data.clickReport.totalClicks)} total
+          </span>
+        </div>
+        <div className="mt-4 flex flex-col gap-3">
+          {clickFlows.length === 0 && (
+            <p className="text-sm text-muted-foreground">No clicks recorded yet.</p>
+          )}
+          {clickFlows.map((f) => (
+            <div key={f.label}>
+              <div className="mb-1 flex items-center justify-between text-sm">
+                <span className="font-medium">{f.label}</span>
+                <span className="text-muted-foreground">
+                  {formatNumber(f.clicks)} · {f.share}%
+                </span>
+              </div>
+              <div className="h-3 w-full overflow-hidden rounded-full bg-muted">
+                <div
+                  className="h-full rounded-full transition-all"
+                  style={{ width: `${f.share}%`, backgroundColor: f.fill }}
+                />
+              </div>
+            </div>
+          ))}
+        </div>
+      </Card>
 
       <Card className="p-5">
         <div className="flex items-start justify-between gap-3">

@@ -164,3 +164,40 @@ export async function getTopCategories(range?: DateRange) {
     .orderBy(desc(sql`count(*)`))
     .limit(8)
 }
+
+// Click report: total offer/content clicks broken down by audience flow
+// (passenger, vendor, driver, marshal) plus the top targets within each flow.
+export async function getClickReport(range?: DateRange) {
+  await requireSection('analytics')
+
+  const clickFilter = and(
+    within(engagementEvents.createdAt, range),
+    sql`${engagementEvents.eventType} in ('content_click','ad_click')`,
+  )
+
+  const byUserType = await db
+    .select({
+      userType: engagementEvents.userType,
+      clicks: sql<number>`count(*)::int`,
+      sessions: sql<number>`count(distinct ${engagementEvents.sessionId})::int`,
+    })
+    .from(engagementEvents)
+    .where(clickFilter)
+    .groupBy(engagementEvents.userType)
+    .orderBy(desc(sql`count(*)`))
+
+  const byTypeTarget = await db
+    .select({
+      userType: engagementEvents.userType,
+      target: sql<string>`coalesce(${engagementEvents.target}, 'Unknown')`,
+      clicks: sql<number>`count(*)::int`,
+    })
+    .from(engagementEvents)
+    .where(clickFilter)
+    .groupBy(engagementEvents.userType, engagementEvents.target)
+    .orderBy(desc(sql`count(*)`))
+
+  const totalClicks = byUserType.reduce((sum, r) => sum + r.clicks, 0)
+
+  return { byUserType, byTypeTarget, totalClicks }
+}

@@ -7,7 +7,7 @@ import type { AdminUser } from '@/lib/admin/auth'
 import { roleLabel } from '@/lib/admin/roles'
 import { formatNumber, formatZAR } from '@/lib/admin/format'
 import { KpiCard } from '../kpi-card'
-import { MousePointerClick, TrendingUp, Users, Wallet } from 'lucide-react'
+import { MousePointerClick, TrendingUp, Users, Wallet, Wifi } from 'lucide-react'
 
 export function OverviewSection({
   user,
@@ -34,6 +34,14 @@ export function OverviewSection({
       </Card>
 
       <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+        {f && (
+          <KpiCard
+            label="Wi-Fi revenue"
+            value={formatZAR(f.summary.connectionRevenue)}
+            hint={`${formatNumber(f.summary.connectionCount)} connections`}
+            icon={Wifi}
+          />
+        )}
         {a && (
           <>
             <KpiCard
