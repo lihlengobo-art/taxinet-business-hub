@@ -3,15 +3,54 @@
 import { db } from '@/lib/db'
 import {
   ads,
+  connections,
   connectionSessions,
   contentItems,
   engagementEvents,
   leads,
   notifications,
 } from '@/lib/db/schema'
+import { CONNECTION_PRICE, DEVICE_COOKIE } from '@/lib/pricing'
 import type { AgeGroup, UserType } from '@/lib/user-types'
 import { RANK_NAME } from '@/lib/user-types'
 import { and, desc, eq, isNull, or, sql } from 'drizzle-orm'
+import { cookies } from 'next/headers'
+
+const DEVICE_COOKIE_MAX_AGE = 60 * 60 * 24 * 365
+
+/**
+ * Records one paid R7 Wi-Fi connection for the day, as soon as a visitor
+ * reaches the site — before they pick vendor/passenger/etc. A persistent
+ * device cookie identifies the phone, and the unique (device_id,
+ * connection_date) constraint means the same phone is only counted once per
+ * day, no matter how many times it re-opens the site. The next day counts
+ * again as a fresh R7. This is what drives Wi-Fi revenue in the admin.
+ */
+export async function recordConnection() {
+  const store = await cookies()
+  let deviceId = store.get(DEVICE_COOKIE)?.value
+  if (!deviceId) {
+    deviceId = crypto.randomUUID()
+    store.set(DEVICE_COOKIE, deviceId, {
+      httpOnly: true,
+      sameSite: 'lax',
+      secure: process.env.NODE_ENV === 'production',
+      path: '/',
+      maxAge: DEVICE_COOKIE_MAX_AGE,
+    })
+  }
+
+  try {
+    await db
+      .insert(connections)
+      .values({ deviceId, amount: String(CONNECTION_PRICE), rankName: RANK_NAME })
+      .onConflictDoNothing({
+        target: [connections.deviceId, connections.connectionDate],
+      })
+  } catch {
+    // Never break the passenger flow if the connection log fails.
+  }
+}
 
 /**
  * Records a Wi-Fi connection session for analytics, then returns the content
