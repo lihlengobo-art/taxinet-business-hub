@@ -28,6 +28,7 @@ export const auth = betterAuth({
     'http://localhost:3000',
     // v0 preview + Vercel preview/production run on dynamic subdomains.
     'https://*.vusercontent.net',
+    'https://*.vercel.run',
     'https://*.v0.dev',
     'https://*.v0.app',
     'https://*.vercel.app',

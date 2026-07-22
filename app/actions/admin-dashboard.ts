@@ -7,6 +7,7 @@ import {
   getAgeBreakdown,
   getAnalyticsOverview,
   getAudienceByUserType,
+  getClickReport,
   getFunnel,
   getTopCategories,
   getTrafficByDay,
@@ -38,13 +39,15 @@ export async function loadDashboard(range: DateRange) {
           getAgeBreakdown(range),
           getFunnel(range),
           getTopCategories(range),
-        ]).then(([overview, traffic, audience, ages, funnel, categories]) => ({
+          getClickReport(range),
+        ]).then(([overview, traffic, audience, ages, funnel, categories, clickReport]) => ({
           overview,
           traffic,
           audience,
           ages,
           funnel,
           categories,
+          clickReport,
         }))
       : null,
     canAccess(role, 'finance')
