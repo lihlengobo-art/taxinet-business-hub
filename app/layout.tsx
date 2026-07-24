@@ -14,24 +14,7 @@ export const metadata: Metadata = {
   title: 'Taxinet Connect — Smart Rank Wi-Fi',
   description:
     'Community Wi-Fi access at the taxi rank with services, opportunities and updates tailored to passengers, drivers, vendors and rank marshals.',
-  generator: 'v0.app',
-  icons: {
-    icon: [
-      {
-        url: '/icon-light-32x32.png',
-        media: '(prefers-color-scheme: light)',
-      },
-      {
-        url: '/icon-dark-32x32.png',
-        media: '(prefers-color-scheme: dark)',
-      },
-      {
-        url: '/icon.svg',
-        type: 'image/svg+xml',
-      },
-    ],
-    apple: '/apple-icon.png',
-  },
+  applicationName: 'Taxinet Connect',
 }
 
 export default function RootLayout({
