@@ -11,6 +11,7 @@ import {
   notifications,
 } from '@/lib/db/schema'
 import { CONNECTION_PRICE, DEVICE_COOKIE } from '@/lib/pricing'
+import { currentRotationBucket } from '@/lib/rotation'
 import type { AgeGroup, UserType } from '@/lib/user-types'
 import { RANK_NAME } from '@/lib/user-types'
 import { and, desc, eq, isNull, or, sql } from 'drizzle-orm'
@@ -80,7 +81,13 @@ export async function startSession(input: {
 }
 
 export async function getContentFor(userType: UserType, ageGroup?: AgeGroup | null) {
-  const conditions = [eq(contentItems.active, true), eq(contentItems.userType, userType)]
+  const bucket = currentRotationBucket()
+  const conditions = [
+    eq(contentItems.active, true),
+    eq(contentItems.userType, userType),
+    // Evergreen items (NULL) always show; rotating items only on their week.
+    or(isNull(contentItems.rotationGroup), eq(contentItems.rotationGroup, bucket)),
+  ]
 
   // Passengers get age-targeted content; other roles ignore age group.
   if (userType === 'passenger' && ageGroup) {
@@ -116,10 +123,17 @@ export async function getAdsFor(userType: UserType, ageGroup?: AgeGroup | null) 
 }
 
 export async function getNotificationsFor(userType: UserType) {
+  const bucket = currentRotationBucket()
   return db
     .select()
     .from(notifications)
-    .where(or(eq(notifications.audience, 'all'), eq(notifications.audience, userType)))
+    .where(
+      and(
+        or(eq(notifications.audience, 'all'), eq(notifications.audience, userType)),
+        // Evergreen messages (NULL) always show; rotating ones only on their week.
+        or(isNull(notifications.rotationGroup), eq(notifications.rotationGroup, bucket)),
+      ),
+    )
     .orderBy(desc(notifications.createdAt))
     .limit(6)
 }

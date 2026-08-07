@@ -21,6 +21,8 @@ export const contentItems = pgTable('content_items', {
   icon: text('icon'),
   priority: integer('priority').notNull().default(0),
   active: boolean('active').notNull().default(true),
+  // NULL = evergreen (always shown). 0..N-1 = only shown on its rotation week.
+  rotationGroup: integer('rotation_group'),
   createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
 })
 
@@ -88,6 +90,8 @@ export const notifications = pgTable('notifications', {
   title: text('title').notNull(),
   body: text('body').notNull(),
   level: text('level').notNull().default('info'),
+  // NULL = evergreen (always shown). 0..N-1 = only shown on its rotation week.
+  rotationGroup: integer('rotation_group'),
   createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
 })
 
